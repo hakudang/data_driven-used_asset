@@ -276,3 +276,10 @@ Hệ thống đảm bảo:
 ---
 
 # END OF USE CASE DOCUMENT
+
+## NEXT STEPS
+- Tạo thêm Use Case Execution Matrix (UC ↔ FR ↔ BR ↔ VAL ↔ ERR) chuẩn BrSE
+
+- Hoặc vẽ Use Case Diagram bằng Mermaid
+
+- Hoặc tách riêng thành Business UC và System UC (chuẩn enterprise)
