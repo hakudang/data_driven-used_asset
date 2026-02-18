@@ -1,6 +1,7 @@
 # SYSTEM REQUIREMENT (SR)
 ## Hệ thống Kiểm soát Đầu tư Tài sản Cũ 
-### SR v1.2 ENTERPRISE – FULL (FR/NFR + Acceptance chi tiết)
+
+- FR/NFR + Acceptance chi tiết cho từng yêu cầu
 
 ```
 Owner: Dang  
