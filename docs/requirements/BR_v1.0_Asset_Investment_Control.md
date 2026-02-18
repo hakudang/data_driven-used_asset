@@ -2,9 +2,9 @@
 
 ## Hệ thống Kiểm soát Đầu tư Tài sản Cũ
 ```
-Version: BR v1.0\
-Owner: Dang\
-Status: Baseline -- Governance Controlled\
+Version: BR v1.0
+Owner: Dang
+Status: Baseline -- Governance Controlled
 Created On: 2026-02-18
 Related Docs: CR v1.0, SR v1.0 ENTERPRISE, RTM_v1.0
 ```
@@ -47,9 +47,8 @@ Không được phép thay đổi rule mà không:
 
 ## FRL-01: Total Cost Calculation
 
-total_cost = purchase_price + dismantle_cost + transport_cost +
-hazardous_cost\
-- Cost field trống → mặc định = 0\
+total_cost = purchase_price + dismantle_cost + transport_cost + hazardous_cost
+- Cost field trống → mặc định = 0
 - Không được phép âm
 
 ## FRL-02: Expected Profit
