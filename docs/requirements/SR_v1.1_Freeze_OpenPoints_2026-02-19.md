@@ -1,24 +1,27 @@
 # SYSTEM REQUIREMENT (SR)
-## Hệ thống Kiểm soát Đầu tư Tài sản Cũ 
+## Hệ thống Kiểm soát Đầu tư Tài sản Cũ  
+### SR v1.1 – Frozen Open Points (2026-02-19)
 
-- FR/NFR + Acceptance chi tiết cho từng yêu cầu
+```text
+Owner   : Dang
+Version : v1.1
+Status  : Product-Scale Baseline – Ready for Development & QA (Open Points Frozen)
+Region  : Japan
+Date    : 2026-02-19
+```
 
-```
-Owner: Dang  
-Version: v1.0  
-Status: Product-Scale Baseline – Ready for Development & QA  
-Region: Japan  
-```
 ---
 
 # 1. PHẠM VI TÀI LIỆU
 
 Tài liệu này là đặc tả kỹ thuật cấp sản phẩm, bao gồm:
+
 - Kiến trúc hệ thống
 - Data model & contract
 - Functional Requirements (FR) – có Acceptance chi tiết cho từng FR
 - Non-Functional Requirements (NFR) – có Acceptance chi tiết cho từng NFR
 - Logging/Audit, Error handling, Security, Scalability
+- **Các quyết định “Freeze” cho Open Points của SR v1.0**
 
 ---
 
@@ -35,6 +38,7 @@ Tài liệu này là đặc tả kỹ thuật cấp sản phẩm, bao gồm:
 # 3. DATA MODEL (TỐI THIỂU)
 
 ## 3.1 ASSETS (bảng dữ liệu)
+
 Các cột tối thiểu để hệ thống chạy đúng:
 
 | Tên cột | Loại dữ liệu | Mô tả | Bắt buộc | Tự động |
@@ -60,8 +64,14 @@ Các cột tối thiểu để hệ thống chạy đúng:
 | ai_summary | string | Tóm tắt phân tích AI để truy vết nhanh | Không | Có |
 | rule_version | string | Phiên bản rule engine tại thời điểm chốt decision | Có | Không |
 
+> Ghi chú: Tại SR v1.1, `rule_version` tại CONFIG mặc định đề xuất cập nhật là **"v1.1"** để đồng bộ với bộ policy freeze và BR v1.1.
+
+---
+
 ## 3.2 CONFIG (bảng cấu hình)
+
 Các tham số cấu hình có thể thay đổi theo thời gian mà không cần sửa code:
+
 | Tên tham số | Loại dữ liệu | Mô tả | Default | Bắt buộc |
 |-------------|--------------|-------|---------|----------|
 | roi_buy_threshold_resale | number (0–1) | Ngưỡng ROI để đề xuất BUY trong RESALE mode | 0.25 | Có |
@@ -69,9 +79,13 @@ Các tham số cấu hình có thể thay đổi theo thời gian mà không c�
 | roi_buy_threshold_art | number (0–1) | Ngưỡng ROI để đề xuất BUY trong ART mode | 0.40 | Có |
 | risk_skip_threshold | number (0–100) | Ngưỡng risk để override thành SKIP | 80 | Có |
 | scrap_buy_ratio | number (0–1) | Tỷ lệ so với scrap floor để đề xuất BUY trong SCRAP mode | 0.80 | Có |
-| rule_version | string | Phiên bản hiện tại của rule engine | "v1.0" | Có |
+| rule_version | string | Phiên bản hiện tại của rule engine | "v1.1" | Có |
 | ai_enabled | boolean | Bật/tắt tính năng AI Reviewer | true | Có |
 | retry_on_invalid_json | number (0–5) | Số lần retry khi nhận JSON lỗi từ AI | 1 | Có |
+| **large_deal_threshold_jpy** | number | **Ngưỡng deal lớn (JPY) để bắt buộc AI review** | **300000** | Có |
+| **art_provenance_threshold_jpy** | number | **Ngưỡng (JPY) để bắt buộc provenance ở ART** | **300000** | Có |
+| **image_retention_years** | number | **Thời gian retention ảnh (năm)** | **1** | Có |
+| **audit_scope_mode** | enum (CRITICAL_ONLY/FULL_HISTORY) | **Chế độ audit trail** | **CRITICAL_ONLY** | Có |
 
 ---
 
@@ -106,7 +120,7 @@ Nếu risk_score ≥ risk_skip_threshold → decision_suggested = SKIP (override
 
 ## 5.1 Rule Engine
 
-- Rule Engine tự động tính toán và đề xuất decision_suggested theo logic đã định nghĩa ở phần 4. 
+- Rule Engine tự động tính toán và đề xuất `decision_suggested` theo logic đã định nghĩa ở phần 4.  
 - Các cột auto (total_cost, expected_profit, roi, net_scrap_floor, decision_suggested) được cập nhật tự động khi có thay đổi dữ liệu liên quan.
 
 | ID | Mô tả ngắn | Mô tả chi tiết |
@@ -128,11 +142,12 @@ Nếu risk_score ≥ risk_skip_threshold → decision_suggested = SKIP (override
 
 ## 5.2 AI Reviewer – Model A (Selected Row)
 
-AI Reviewer được trigger khi người dùng chọn đúng 1 dòng và nhấn Evaluate. 
-- Hệ thống build payload gồm dữ liệu tài chính + mode + risk + image URLs, sau đó gọi API AI để nhận về phân tích hình ảnh, đánh giá độ đầy đủ dữ liệu, khuyến nghị thị trường tham khảo, counter-offer suggestion, và confidence score. 
-- AI chỉ đóng vai trò hỗ trợ, không thay thế quyết định cuối cùng. 
-- Confidence thấp sẽ bị gating không được khuyến nghị BUY. 
-- Kết quả AI được hiển thị rõ ràng trong sidebar, kèm theo cảnh báo nếu có thiếu dữ liệu hoặc rủi ro cao. 
+AI Reviewer được trigger khi người dùng chọn đúng 1 dòng và nhấn Evaluate.
+
+- Hệ thống build payload gồm dữ liệu tài chính + mode + risk + image URLs, sau đó gọi API AI để nhận về: phân tích hình ảnh, đánh giá độ đầy đủ dữ liệu, khuyến nghị thị trường tham khảo, counter-offer suggestion, và confidence score.
+- AI chỉ đóng vai trò hỗ trợ, không thay thế quyết định cuối cùng.
+- Confidence thấp sẽ bị gating không được khuyến nghị BUY.
+- Kết quả AI được hiển thị rõ ràng trong sidebar, kèm theo cảnh báo nếu có thiếu dữ liệu hoặc rủi ro cao.
 - Mỗi lần Evaluate đều được ghi log đầy đủ để truy vết.
 
 | ID | Mô tả ngắn | Mô tả chi tiết |
@@ -152,23 +167,34 @@ AI Reviewer được trigger khi người dùng chọn đúng 1 dòng và nhấn
 
 ---
 
-## 5.3 Governance & Audit
+## 5.3 Governance & Audit (UPDATED)
 
-- Governance & Audit là yêu cầu bắt buộc để đảm bảo tính minh bạch, truy vết, và kiểm soát rủi ro trong toàn bộ quá trình ra quyết định đầu tư tài sản cũ. 
-- Các yêu cầu này bao gồm việc ghi nhận decision_final cùng approver và timestamp, tạo audit trail cho các thay đổi quan trọng, tracking version của rule khi chốt decision, kiểm soát manual override bằng lý do bắt buộc, lưu tóm tắt AI để truy vết nhanh, và thiết kế sẵn cho batch processing trong tương lai.
+Governance & Audit là yêu cầu bắt buộc để đảm bảo tính minh bạch, truy vết, và kiểm soát rủi ro trong toàn bộ quá trình ra quyết định đầu tư tài sản cũ.
 
 | ID | Mô tả ngắn | Mô tả chi tiết |
 |----|------------|----------------|
-| FR-25 | Decision Final Record | Lưu decision_final, approver, timestamp khi chốt. |
-| FR-26 | Audit Trail | Ghi nhận thay đổi quan trọng (giá, mode, risk, decision_final). |
-| FR-27 | Rule Version Tracking | Gắn rule_version vào asset tại thời điểm decision_final. |
-| FR-28 | Manual Override Control | Override decision_suggested bắt buộc ghi lý do. |
-| FR-29 | AI Summary Storage | Lưu ai_summary để truy vết nhanh. |
-| FR-30 | Batch Ready | Thiết kế sẵn cho batch (tương lai), không bật mặc định. |
+| FR-25  |  Decision Final Record   | Lưu decision_final, approver, timestamp khi chốt. |
+| FR-26  |  Audit Trail (Critical  Only)     | Ghi nhận thay đổi các trường: purchase_price, evaluation_mode, risk_score, decision_final. |
+| FR-27  |  Rule Version Tracking      | Snapshot rule_version tại thời điểm decision_final. |
+| FR-28  |  Manual Override Control    | decision_final ≠ decision_suggested → decision_reason bắt buộc. |
+| FR-29  |  AI Summary Storage         | Lưu ai_summary để truy vết nhanh. |
+| FR-30  |  Batch Ready                | Thiết kế sẵn cho batch (disabled mặc định). |
+
+## 5.4 NEW FUNCTIONAL REQUIREMENTS (v1.1)
+
+| ID    | Mô tả ngắn | Mô tả chi tiết |
+|-------|------------|----------------|
+| FR-31 | Large Deal Enforcement | Nếu purchase_price ≥ 300,000 JPY → bắt buộc AI review trước khi finalize decision_final. |
+| FR-32 | ART Provenance Enforcement | Nếu evaluation_mode = ART và purchase_price ≥ 300,000 JPY → provenance bắt buộc; thiếu → không BUY. |
+| FR-33 | Audit Scope Enforcement | Audit chỉ ghi nhận critical fields; thay đổi ngoài scope không bắt buộc log. |
+| FR-34 | Image Storage Control | Lưu ảnh trong Drive folder riêng, kiểm soát permission (Owner full, Reviewer view). |
+| FR-35 | Image Retention Enforcement | Ảnh được lưu tối đa 1 năm; sau đó archive hoặc delete theo policy. |
 
 ---
 
 # 6. ACCEPTANCE CRITERIA – CHI TIẾT THEO TỪNG FR
+
+## FR-01 → FR-30 giữ nguyên như SR v1.0; không thay đổi nội dung và thứ tự.
 
 ### FR-01: Create Asset
 - Tạo asset_id duy nhất (hoặc validate unique nếu user nhập).
@@ -379,6 +405,30 @@ AI Reviewer được trigger khi người dùng chọn đúng 1 dòng và nhấn
 
 **Acceptance:** Không có auto batch; feature-flag OFF mặc định.
 
+## NEW FR  (v1.1)
+
+### FR-31: Large Deal Enforcement
+
+Acceptance: - purchase_price = 300,000 → không cho finalize nếu chưa
+Evaluate AI.
+
+### FR-32: ART Provenance Enforcement
+
+Acceptance: - ART 350,000 JPY thiếu provenance → system block BUY.
+
+### FR-33: Audit Scope Enforcement
+
+Acceptance: - Đổi purchase_price → có audit log. - Đổi ai_summary →
+không bắt buộc audit log.
+
+### FR-34: Image Storage Control
+
+Acceptance: - Người không có permission → không truy cập được ảnh.
+
+### FR-35: Image Retention Enforcement
+
+Acceptance: - Sau 1 năm → ảnh được archive/delete theo config.
+
 ---
 
 # 7. NON-FUNCTIONAL REQUIREMENTS (NFR)
@@ -405,86 +455,115 @@ AI Reviewer được trigger khi người dùng chọn đúng 1 dòng và nhấn
 | NFR-18 | Data Completeness Enforcement | Thiếu dữ liệu nghiêm trọng không BUY. |
 | NFR-19 | Versioning Discipline | Quản lý version + changelog. |
 | NFR-20 | SaaS Ready | Contract độc lập layout; migrate dễ. |
+| NFR-21 | Large Deal Mandatory AI Review | Deal lớn bắt buộc AI review theo policy freeze. |
+| NFR-22 | ART Provenance Enforcement | ART vượt ngưỡng bắt buộc provenance. |
+| NFR-23 | Audit Scope Control | Audit trail theo scope CRITICAL_ONLY. |
+| NFR-24 | Image Retention Compliance | Ảnh tuân thủ retention 1 năm. |
 
 ---
 
 # 8. ACCEPTANCE CRITERIA – CHI TIẾT THEO TỪNG NFR
 
-### NFR-01: Performance
-**Acceptance:** 10 lần Evaluate → median ≤ 10s; p95 ≤ 20s (mục tiêu).
+(Phần Acceptance NFR-01 → NFR-20 giữ nguyên như SR v1.0; không thay đổi nội dung và thứ tự.)
 
-### NFR-02: Availability
-**Acceptance:** AI lỗi → ROI/Scrap/Decision Suggested vẫn hoạt động; UI báo lỗi rõ.
+Bổ sung Acceptance cho các NFR mới:
 
-### NFR-03: Security
-**Acceptance:** Không có API key trong sheet/code public; key chỉ ở User Properties.
+### NFR-21: Large Deal Mandatory AI Review
+**Acceptance:** purchase_price ≥ 300,000 JPY → trạng thái yêu cầu AI review; không cho finalize khi chưa Evaluate AI.
 
-### NFR-04: No Crawling
-**Acceptance:** Không có request marketplace; output luôn kèm disclaimer verify.
+### NFR-22: ART Provenance Enforcement
+**Acceptance:** ART purchase_price ≥ 300,000 JPY và provenance missing → không BUY và hiển thị cảnh báo “Provenance Required”.
 
-### NFR-05: Logging Reliability
-**Acceptance:** 20 Evaluate → 20 log; không thiếu.
+### NFR-23: Audit Scope Control
+**Acceptance:** Audit log chỉ ghi critical fields theo policy; thay đổi ngoài scope không bắt buộc tạo log.
 
-### NFR-06: Scalability
-**Acceptance:** Asset có asset_id + rule_version + audit fields để migrate DB.
-
-### NFR-07: Config Management
-**Acceptance:** Thay threshold trong CONFIG → decision đổi đúng, không sửa code.
-
-### NFR-08: Data Integrity
-**Acceptance:** Evaluate không ghi đè nhầm cột input; không mất dữ liệu.
-
-### NFR-09: Error Handling
-**Acceptance:** JSON lỗi → retry 1 lần; vẫn lỗi → fail graceful không crash.
-
-### NFR-10: Usability
-**Acceptance:** Người dùng ra quyết định trong ≤ 30s dựa trên sidebar.
-
-### NFR-11: Maintainability
-**Acceptance:** Dev thay đổi rule/threshold dễ, không ảnh hưởng UI.
-
-### NFR-12: Audit Compliance
-**Acceptance:** Truy vết decision_final + approver + time + reason + ai_summary.
-
-### NFR-13: Extensibility
-**Acceptance:** Thêm category/mode mới không làm lỗi core rule.
-
-### NFR-14: Confidentiality
-**Acceptance:** Hình ảnh tuân thủ policy lưu trữ/quyền; không leak ra ngoài.
-
-### NFR-15: Threshold Safety
-**Acceptance:** Không có trường hợp risk≥threshold mà suggested=BUY.
-
-### NFR-16: Recovery
-**Acceptance:** Timeout API → UI hiện lỗi + fallback; sheet không treo.
-
-### NFR-17: Provider Swap Ready
-**Acceptance:** Đổi provider chỉ sửa adapter, không sửa rule engine.
-
-### NFR-18: Data Completeness Enforcement
-**Acceptance:** Thiếu dữ liệu nghiêm trọng → confidence ≤ 2 và không BUY.
-
-### NFR-19: Versioning Discipline
-**Acceptance:** Mỗi release có version; SR/CR/Rule version đồng bộ.
-
-### NFR-20: SaaS Ready
-**Acceptance:** Payload/output/log độc lập layout; migrate web không rewrite toàn bộ.
+### NFR-24: Image Retention Compliance
+**Acceptance:** Ảnh được lưu trong Drive folder riêng, kiểm soát quyền truy cập; retention 1 năm.
 
 ---
 
-# 9. OPEN POINTS
+# 9. OPEN POINTS – FROZEN OPTIONS (2026-02-19)
 
-1. Định nghĩa “deal lớn” (ngưỡng giá trị) để bắt buộc AI review.
-   - Đề xuất: purchase_price ≥ 300,000 JPY → bắt buộc AI review.
-2. Policy provenance cho ART (bắt buộc theo giá trị hay luôn bắt buộc). 
-Anwser : 
-   - Đề xuất: chỉ bắt buộc provenance ( chứng thực nguồn gốc xuất xứ ) khi purchase_price ≥ 300,000 JPY để cân bằng giữa rủi ro và chi phí thu thập chứng từ.
+Mục tiêu của phần này là **chốt phương án** cho các Open Points ở SR v1.0 để Dev/QA triển khai và test thống nhất.
 
-3. Audit trail: full history hay chỉ critical fields.
-   - Đề xuất: chỉ critical fields (purchase_price, evaluation_mode, risk_score, decision_final) để tránh quá tải dữ liệu.
-4. Policy lưu ảnh: Drive folder, permission, retention.
-    - Đề xuất: lưu ảnh trong Drive folder riêng, chỉ người có permission mới truy cập; retention 1 năm.
+## 9.1 Open Point #1 – Deal lớn: bắt buộc AI review
+
+**Freeze phương án:**  
+- `purchase_price ≥ 300,000 JPY` → **bắt buộc AI review**
+
+**Hành vi hệ thống yêu cầu (normative):**
+- Khi `purchase_price` đạt ngưỡng, hệ thống phải đánh dấu deal là “Mandatory AI Review”.
+- Khi deal đang ở trạng thái Mandatory AI Review và `ai_enabled = true`:
+  - Không cho phép chốt `decision_final` nếu `ai_last_review_at` chưa có.
+
+**Acceptance (Policy):**
+- asset purchase_price = 300,000 → phải Evaluate AI trước khi finalize.
 
 ---
+
+## 9.2 Open Point #2 – Provenance cho ART: bắt buộc theo giá trị
+
+**Freeze phương án:**  
+- Chỉ bắt buộc provenance (chứng thực nguồn gốc xuất xứ) khi `purchase_price ≥ 300,000 JPY` (ART mode)
+
+**Hành vi hệ thống yêu cầu (normative):**
+- Nếu `evaluation_mode = ART` và `purchase_price ≥ 300,000`:
+  - Provenance bắt buộc
+  - Thiếu provenance → không được BUY (cả suggested và final)
+
+**Acceptance (Policy):**
+- ART 350,000 JPY thiếu provenance → system block BUY và hiển thị cảnh báo.
+
+---
+
+## 9.3 Open Point #3 – Audit trail: chỉ critical fields
+
+**Freeze phương án:**  
+- Chỉ audit critical fields để tránh quá tải dữ liệu:
+
+**Critical fields (freeze):**
+- `purchase_price`
+- `evaluation_mode`
+- `risk_score`
+- `decision_final`
+
+**Hành vi hệ thống yêu cầu (normative):**
+- Chỉ thay đổi các trường trên mới bắt buộc tạo audit record.
+- Các field khác (cosmetic/non-critical) không bắt buộc log (tùy vận hành).
+
+**Acceptance (Policy):**
+- Đổi purchase_price → có audit record.
+- Đổi field ngoài critical → không bắt buộc audit record.
+
+---
+
+## 9.4 Open Point #4 – Policy lưu ảnh: Drive + permission + retention 1 năm
+
+**Freeze phương án:**  
+- Lưu ảnh trong Drive folder riêng, chỉ người có permission mới truy cập; retention 1 năm.
+
+**Hành vi hệ thống yêu cầu (normative):**
+- Lưu ảnh theo cấu trúc folder tách riêng theo dự án và asset_id (khuyến nghị):
+  - `/Drive/Asset-Investment-Control/YYYY/asset_id/`
+- Permission:
+  - Owner: Full access
+  - Reviewer: View tối thiểu
+  - Không public link mặc định
+- Retention:
+  - `image_retention_years = 1`
+  - Sau thời hạn: archive hoặc delete theo vận hành
+
+**Acceptance (Policy):**
+- Người không có quyền không truy cập ảnh.
+- Policy retention 1 năm được cấu hình và áp dụng.
+
+---
+
+# 10. CHANGE LOG
+| Version | Date       | Description of Change | Author |
+|---------|------------|-----------------------|--------|
+| v1.0    | 2025-12-01 | Initial draft with core architecture, data model, FRs, NFRs; Open Points identified. | Dang   |
+| v1.1    | 2026-02-19 | Updated to freeze Open Points: Large Deal AI Review, ART Provenance, Audit Scope, Image Policy. Added detailed Acceptance Criteria for each. | Dang   |
 
 # END OF DOCUMENT
+
