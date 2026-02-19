@@ -190,6 +190,18 @@ Governance & Audit là yêu cầu bắt buộc để đảm bảo tính minh b�
 | FR-34 | Image Storage Control | Lưu ảnh trong Drive folder riêng, kiểm soát permission (Owner full, Reviewer view). |
 | FR-35 | Image Retention Enforcement | Ảnh được lưu tối đa 1 năm; sau đó archive hoặc delete theo policy. |
 
+## 5.5 IMAGE HANDLING – NEW FR (v1.1)
+
+Mục tiêu: chuẩn hóa quy trình upload, validate, link ảnh để AI review và audit vận hành ổn định.
+
+| ID | Mô tả ngắn | Mô tả chi tiết |
+|----|------------|----------------|
+| FR-36 | Image Upload UI Action | Trong Sidebar, cung cấp action Upload cho 2 loại ảnh: nameplate và overall. Upload xong → lưu file vào Drive và ghi URL vào ASSETS. |
+| FR-37 | Image Validation and Linking | Validate file trước khi lưu: loại file ảnh hợp lệ, dung lượng tối đa, không rỗng. Lưu xong → set image_nameplate_url hoặc image_overall_url đúng record asset_id hiện tại. |
+| FR-38 | Image Requirement Gate for Evaluate | Khi nhấn Evaluate, nếu image_required_for_ai = true thì kiểm tra bộ ảnh tối thiểu theo image_min_required_set. Không đạt → block gọi AI và hiển thị checklist cần bổ sung. |
+| FR-39 | Image Folder Convention | Khi lưu ảnh, hệ thống tạo path chuẩn theo: image_folder_root / YYYY / asset_id /. Tên file phải chứa asset_id và loại ảnh để truy vết. |
+| FR-40 | Image Access Control | File ảnh phải set permission theo policy: Owner full, Reviewer view, không public link mặc định. Nếu không set được permission → vẫn lưu URL nhưng hiển thị cảnh báo compliance và log event. |
+
 ---
 
 # 6. ACCEPTANCE CRITERIA – CHI TIẾT THEO TỪNG FR
@@ -405,7 +417,7 @@ Governance & Audit là yêu cầu bắt buộc để đảm bảo tính minh b�
 
 **Acceptance:** Không có auto batch; feature-flag OFF mặc định.
 
-## NEW FR  (v1.1)
+## NEW FR - OPEN POINTS (v1.1)
 
 ### FR-31: Large Deal Enforcement
 
@@ -428,6 +440,39 @@ Acceptance: - Người không có permission → không truy cập được ản
 ### FR-35: Image Retention Enforcement
 
 Acceptance: - Sau 1 năm → ảnh được archive/delete theo config.
+
+## NEW FR - IMAGE HANDLING (v1.1)
+
+### FR-36: Image Upload UI Action
+Acceptance:
+- Upload nameplate → image_nameplate_url được set đúng dòng asset_id.
+- Upload overall → image_overall_url được set đúng dòng asset_id.
+- Reload sheet → URL vẫn tồn tại và file vẫn truy cập được theo quyền.
+
+### FR-37: Image Validation and Linking
+Acceptance:
+- Upload file không phải ảnh hoặc file rỗng → bị chặn và báo lỗi rõ.
+- Upload ảnh vượt giới hạn dung lượng → bị chặn và báo lỗi rõ.
+- Upload hợp lệ → URL ghi đúng cột, đúng asset_id, không ghi nhầm dòng.
+
+### FR-38: Image Requirement Gate for Evaluate
+Acceptance:
+- image_required_for_ai = true và image_min_required_set = AT_LEAST_ONE
+  - Không có cả 2 URL → block Evaluate, không gọi AI, checklist yêu cầu upload.
+  - Có 1 trong 2 URL → cho phép Evaluate.
+- image_min_required_set = BOTH
+  - Thiếu 1 loại → block Evaluate và checklist rõ.
+
+### FR-39: Image Folder Convention
+Acceptance:
+- Upload ảnh → file nằm đúng path: image_folder_root / YYYY / asset_id /
+- Tên file chứa asset_id và tag nameplate hoặc overall.
+
+### FR-40: Image Access Control
+Acceptance:
+- Người không có permission → không truy cập được file ảnh.
+- Owner truy cập được.
+- Nếu permission set thất bại → UI hiển thị cảnh báo compliance và có log.
 
 ---
 
@@ -564,6 +609,7 @@ Mục tiêu của phần này là **chốt phương án** cho các Open Points �
 |---------|------------|-----------------------|--------|
 | v1.0    | 2025-12-01 | Initial draft with core architecture, data model, FRs, NFRs; Open Points identified. | Dang   |
 | v1.1    | 2026-02-19 | Updated to freeze Open Points: Large Deal AI Review, ART Provenance, Audit Scope, Image Policy. Added detailed Acceptance Criteria for each. | Dang   |
+| v1.1 | 2026-02-19 | Add Image Handling FR-36 to FR-40 with acceptance. | Dang |
 
 # END OF DOCUMENT
 

@@ -158,7 +158,10 @@ flowchart TD
 
   L1 --> P{Mode ART va Deal >= 300000 JPY}
   P -- Yes --> P1[Provenance Required]
-  P -- No --> M
+  P -- No --> U
+
+  %% Upload Image node inserted here
+  U[Upload Image Nameplate và Overall] --> M
 
   M[AI Reviewer Evaluate AR] --> M1[Phân tích data, image]
   M1 --> M2[AI Confidence Score 1-5]
