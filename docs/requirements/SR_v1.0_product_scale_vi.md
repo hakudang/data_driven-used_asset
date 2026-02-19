@@ -230,7 +230,7 @@ AI Reviewer được trigger khi người dùng chọn đúng 1 dòng và nhấn
 ### FR-09: Decision Engine Art
 - Theo ngưỡng ART và provenance policy.
 
-**Acceptance:** ROI=0.45 + provenance ok → BUY; provenance missing → không BUY.
+**Acceptance:** ROI=0.45 + provenance ok → BUY; provenance missing ( không có chứng thực nguồn gốc xuất xứ ) → không BUY.
 
 ---
 
@@ -474,10 +474,16 @@ AI Reviewer được trigger khi người dùng chọn đúng 1 dòng và nhấn
 
 # 9. OPEN POINTS
 
-- Định nghĩa “deal lớn” (ngưỡng giá trị) để bắt buộc AI review.
-- Policy provenance cho ART (bắt buộc theo giá trị hay luôn bắt buộc).
-- Audit trail: full history hay chỉ critical fields.
-- Policy lưu ảnh: Drive folder, permission, retention.
+1. Định nghĩa “deal lớn” (ngưỡng giá trị) để bắt buộc AI review.
+   - Đề xuất: purchase_price ≥ 300,000 JPY → bắt buộc AI review.
+2. Policy provenance cho ART (bắt buộc theo giá trị hay luôn bắt buộc). 
+Anwser : 
+   - Đề xuất: chỉ bắt buộc provenance ( chứng thực nguồn gốc xuất xứ ) khi purchase_price ≥ 300,000 JPY để cân bằng giữa rủi ro và chi phí thu thập chứng từ.
+
+3. Audit trail: full history hay chỉ critical fields.
+   - Đề xuất: chỉ critical fields (purchase_price, evaluation_mode, risk_score, decision_final) để tránh quá tải dữ liệu.
+4. Policy lưu ảnh: Drive folder, permission, retention.
+    - Đề xuất: lưu ảnh trong Drive folder riêng, chỉ người có permission mới truy cập; retention 1 năm.
 
 ---
 
