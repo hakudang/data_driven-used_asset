@@ -37,36 +37,41 @@ Tài liệu này là đặc tả kỹ thuật cấp sản phẩm, bao gồm:
 ## 3.1 ASSETS (bảng dữ liệu)
 Các cột tối thiểu để hệ thống chạy đúng:
 
-- asset_id (string, unique)
-- category (enum: IT / AGRI / CNC / ART / OTHER)
-- evaluation_mode (enum: RESALE / SCRAP / ART)
-- purchase_price (number)
-- resale_est (number, optional for SCRAP)
-- weight_est_kg (number, required for SCRAP)
-- scrap_price_per_kg (number, required for SCRAP)
-- dismantle_cost (number, default 0)
-- transport_cost (number, default 0)
-- hazardous_cost (number, default 0)
-- risk_score (number, 0–100)
-- decision_suggested (enum: BUY / NEGOTIATE / SKIP) – auto by Rule Engine
-- decision_final (enum: BUY / NEGOTIATE / SKIP) – manual by Owner/Reviewer
-- decision_reason (string) – required when manual override
-- image_nameplate_url (string, optional)
-- image_overall_url (string, optional)
-- ai_confidence (number 1–5, optional)
-- ai_last_review_at (datetime, optional)
-- ai_summary (string, optional)
-- rule_version (string, required for audit)
+| Tên cột | Loại dữ liệu | Mô tả | Bắt buộc | Tự động |
+|---------|--------------|-------|----------|---------|
+| asset_id | string | ID duy nhất của tài sản | Có | Không |
+| category | enum (IT/AGRI/CNC/ART/OTHER) | Phân loại tài sản | Có | Không |
+| evaluation_mode | enum (RESALE/SCRAP/ART) | Chế độ đánh giá | Có | Không |
+| purchase_price | number | Giá mua ban đầu | Có | Không |
+| resale_est | number | Giá ước tính khi bán lại (RESALE/ART) | Tùy mode | Không |
+| weight_est_kg | number | Trọng lượng ước tính (SCRAP) | Tùy mode | Không |
+| scrap_price_per_kg | number | Giá phế liệu/kg (SCRAP) | Tùy mode | Không |
+| dismantle_cost | number | Chi phí tháo dỡ | Không | Không |
+| transport_cost | number | Chi phí vận chuyển | Không | Không |
+| hazardous_cost | number | Chi phí xử lý chất thải nguy hại | Không | Không |
+| risk_score | number (0–100) | Điểm rủi ro tổng hợp | Có | Không |
+| decision_suggested | enum (BUY/NEGOTIATE/SKIP) | Đề xuất quyết định từ Rule Engine | Có | Có |
+| decision_final | enum (BUY/NEGOTIATE/SKIP) | Quyết định cuối cùng sau review | Có | Không |
+| decision_reason | string | Lý do khi override decision_suggested | Khi override | Không |
+| image_nameplate_url | string | URL ảnh nameplate (nếu có) | Không | Không |
+| image_overall_url | string | URL ảnh tổng thể (nếu có) | Không | Không |
+| ai_confidence | number (1–5) | Điểm confidence từ AI Reviewer | Không | Có |
+| ai_last_review_at | datetime | Timestamp lần đánh giá AI cuối cùng | Không | Có |
+| ai_summary | string | Tóm tắt phân tích AI để truy vết nhanh | Không | Có |
+| rule_version | string | Phiên bản rule engine tại thời điểm chốt decision | Có | Không |
 
 ## 3.2 CONFIG (bảng cấu hình)
-- roi_buy_threshold_resale (default 0.25)
-- roi_negotiate_threshold_resale (default 0.15)
-- roi_buy_threshold_art (default 0.40)
-- risk_skip_threshold (default 80)
-- scrap_buy_ratio (default 0.80)
-- rule_version (string)
-- ai_enabled (bool)
-- retry_on_invalid_json (default 1)
+Các tham số cấu hình có thể thay đổi theo thời gian mà không cần sửa code:
+| Tên tham số | Loại dữ liệu | Mô tả | Default | Bắt buộc |
+|-------------|--------------|-------|---------|----------|
+| roi_buy_threshold_resale | number (0–1) | Ngưỡng ROI để đề xuất BUY trong RESALE mode | 0.25 | Có |
+| roi_negotiate_threshold_resale | number (0–1) | Ngưỡng ROI để đề xuất NEGOTIATE trong RESALE mode | 0.15 | Có |
+| roi_buy_threshold_art | number (0–1) | Ngưỡng ROI để đề xuất BUY trong ART mode | 0.40 | Có |
+| risk_skip_threshold | number (0–100) | Ngưỡng risk để override thành SKIP | 80 | Có |
+| scrap_buy_ratio | number (0–1) | Tỷ lệ so với scrap floor để đề xuất BUY trong SCRAP mode | 0.80 | Có |
+| rule_version | string | Phiên bản hiện tại của rule engine | "v1.0" | Có |
+| ai_enabled | boolean | Bật/tắt tính năng AI Reviewer | true | Có |
+| retry_on_invalid_json | number (0–5) | Số lần retry khi nhận JSON lỗi từ AI | 1 | Có |
 
 ---
 
@@ -101,6 +106,9 @@ Nếu risk_score ≥ risk_skip_threshold → decision_suggested = SKIP (override
 
 ## 5.1 Rule Engine
 
+- Rule Engine tự động tính toán và đề xuất decision_suggested theo logic đã định nghĩa ở phần 4. 
+- Các cột auto (total_cost, expected_profit, roi, net_scrap_floor, decision_suggested) được cập nhật tự động khi có thay đổi dữ liệu liên quan.
+
 | ID | Mô tả ngắn | Mô tả chi tiết |
 |----|------------|----------------|
 | FR-01 | Create Asset | Tạo bản ghi tài sản với asset_id duy nhất và lưu bền vững trong ASSETS. |
@@ -120,6 +128,13 @@ Nếu risk_score ≥ risk_skip_threshold → decision_suggested = SKIP (override
 
 ## 5.2 AI Reviewer – Model A (Selected Row)
 
+AI Reviewer được trigger khi người dùng chọn đúng 1 dòng và nhấn Evaluate. 
+- Hệ thống build payload gồm dữ liệu tài chính + mode + risk + image URLs, sau đó gọi API AI để nhận về phân tích hình ảnh, đánh giá độ đầy đủ dữ liệu, khuyến nghị thị trường tham khảo, counter-offer suggestion, và confidence score. 
+- AI chỉ đóng vai trò hỗ trợ, không thay thế quyết định cuối cùng. 
+- Confidence thấp sẽ bị gating không được khuyến nghị BUY. 
+- Kết quả AI được hiển thị rõ ràng trong sidebar, kèm theo cảnh báo nếu có thiếu dữ liệu hoặc rủi ro cao. 
+- Mỗi lần Evaluate đều được ghi log đầy đủ để truy vết.
+
 | ID | Mô tả ngắn | Mô tả chi tiết |
 |----|------------|----------------|
 | FR-13 | Trigger Evaluate | AI chỉ chạy khi người dùng chọn đúng 1 dòng và nhấn Evaluate. |
@@ -138,6 +153,9 @@ Nếu risk_score ≥ risk_skip_threshold → decision_suggested = SKIP (override
 ---
 
 ## 5.3 Governance & Audit
+
+- Governance & Audit là yêu cầu bắt buộc để đảm bảo tính minh bạch, truy vết, và kiểm soát rủi ro trong toàn bộ quá trình ra quyết định đầu tư tài sản cũ. 
+- Các yêu cầu này bao gồm việc ghi nhận decision_final cùng approver và timestamp, tạo audit trail cho các thay đổi quan trọng, tracking version của rule khi chốt decision, kiểm soát manual override bằng lý do bắt buộc, lưu tóm tắt AI để truy vết nhanh, và thiết kế sẵn cho batch processing trong tương lai.
 
 | ID | Mô tả ngắn | Mô tả chi tiết |
 |----|------------|----------------|
