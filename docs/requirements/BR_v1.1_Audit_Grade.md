@@ -161,6 +161,8 @@ decision_final ≠ decision_suggested → decision_reason bắt buộc.
 
 Chốt decision_final → snapshot rule_version.
 
+Giải thích: Mỗi lần owner chốt decision_final, hệ thống sẽ lưu lại rule_version hiện tại để đảm bảo truy vết được quy tắc đã áp dụng tại thời điểm đó.
+
 ## CRL-03: Audit Logging Mandatory
 
 Log bắt buộc: purchase_price, evaluation_mode, risk_score,
