@@ -264,3 +264,4 @@ Related Documents:
 | Version | Date       | Description of Change | Author |
 |---------|------------|-----------------------|--------|
 | v1.0 | 2026-02-19 | Initial draft | Dang |
+| v1.1 | 2026-02-20 | Update for open points, image handle | Dang |
