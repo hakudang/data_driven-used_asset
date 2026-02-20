@@ -612,4 +612,3 @@ Mục tiêu của phần này là **chốt phương án** cho các Open Points �
 | v1.1 | 2026-02-19 | Add Image Handling FR-36 to FR-40 with acceptance. | Dang |
 
 # END OF DOCUMENT
-
